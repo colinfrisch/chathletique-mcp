@@ -313,3 +313,70 @@ def figures_speed_hr_by_activity(
             speed_kmh = speed_kmh[::slice_step]
 
         # Convert to lists for JSON (data stored in figures)
+
+
+@mcp.tool(
+    title = "Get Strava segments not starred by the user",
+    description = "Get Strava segments within 2km of a location which haven't been done by the user",
+)
+def get_strava_close_segments(
+
+        starting_place: str = Field(
+        description="The start of the itinerary", default="Opéra, Paris")) -> str:
+    """Get the segments close to a given location"""
+
+    def _get_coordinates(place_name: str) -> Coordinates:
+        """Get the coordinates of a place name"""
+        geolocator = Nominatim(user_agent="my_geocoder_app")
+        try:
+            location = geolocator.geocode(place_name)
+        except (GeocoderTimedOut, GeocoderServiceError) as e:
+            print("Error:", e)
+            return "Failed to get coordinates"
+        if location:
+            return (location.longitude, location.latitude)
+        else:
+            return "Failed to get coordinates"
+        
+    coords = _get_coordinates(starting_place)
+    if coords == "Failed to get coordinates":
+        return coords
+    lat, lon = coords[1], coords[0]
+
+    distance_km = 1.0  # 1km radius to make a 2km wide box
+
+    lat_delta = distance_km / 111.1
+    lon_delta = distance_km / (111.1 * math.cos(math.radians(lat)))
+
+    bounds = [
+        lat - lat_delta,  # South
+        lon - lon_delta,  # West
+        lat + lat_delta,  # North
+        lon + lon_delta,  # East
+    ]
+
+    text_result: str = ""
+
+    try:
+        segments = client_strava.explore_segments(bounds=bounds, activity_type="running")
+
+        if not segments:
+            return "No segments found in the area."
+        
+        starred_segments = client_strava.get_starred_segments()
+        starred_segment_ids = {segment.id for segment in starred_segments}
+
+        for segment in segments:
+            if segment.id not in starred_segment_ids:
+                result = {
+                "name": segment.name,
+                "distance (m)": segment.distance
+                            }
+                text_result += json.dumps(result) + "\n"
+
+        
+        return text_result
+
+    except Exception as e:
+        return f"Error retrieving segments: {e}"
+    
