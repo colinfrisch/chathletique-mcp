@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from geopy.exc import GeocoderServiceError, GeocoderTimedOut
 from geopy.geocoders import Nominatim
 from pydantic import BaseModel, Field
-
+from collections import defaultdict
 from .mcp_utils import mcp
 
 # -------------------------------- Globals --------------------------------
@@ -424,5 +424,83 @@ def get_strava_clubs() -> str:
 
     except Exception as e:
         return f"Error retrieving clubs: {e}"
-    
 
+
+@mcp.tool(
+    title = "Get most fastest people in a Strava club t",
+    description = "Gets the fastest people in a Strava club based on their average pace and return them in a list"
+)
+def make_strava_club_leaderboard(club_id: str) -> str:
+
+    txt_result: str = ""
+
+    try: 
+        club = client_strava.get_club(club_id)
+        members = client_strava.get_club_members(club_id)
+        activities = client_strava.get_club_activities(club_id, limit = 200)
+
+
+        if not members:
+            return "No members found for the club."
+
+        txt_result: str = ""
+
+        # Dictionary to accumulate data
+        stats = defaultdict(lambda: {
+            "total_distance": 0.0,   # meters
+            "total_time": 0.0,       # seconds
+            "count": 0
+        })
+
+        for activity in activities:  
+            athlete_name = f"{activity.athlete.firstname} {activity.athlete.lastname}"
+        #if activity.type == "Run":
+            # Distance in meters
+            distance_m = float(activity.distance)  
+            # Moving time in seconds
+            time_s = float(activity.moving_time)
+            
+            stats[athlete_name]["total_distance"] += distance_m
+            stats[athlete_name]["total_time"] += time_s
+            stats[athlete_name]["count"] += 1
+
+        # Compute results
+        results = {}
+        for athlete, values in stats.items():
+            total_d = values["total_distance"]
+            total_t = values["total_time"]
+            count = values["count"]
+
+            avg_d = total_d / count
+            avg_t = total_t / count  # seconds per run
+            
+            # pace in min/km → (time in seconds / distance in meters) * 1000 / 60
+            avg_pace = (avg_t / avg_d) * 1000 / 60  
+
+            results[athlete] = {
+                "total_distance": total_d,
+                "average_distance": avg_d,
+                "average_pace": avg_pace
+            }
+
+
+        # Sort by average pace (ascending)
+        sorted_results = sorted(results.items(), key=lambda x: x[1]["average_pace"])
+        sorted_results = sorted_results[:15]  # Top 15
+        # Append to txt_result
+
+        for athlete, data in sorted_results:
+            avg_pace = data["average_pace"]
+            total_d = data["total_distance"]
+            avg_d = data["average_distance"]
+            
+            txt_result += (
+            f"{athlete}: total = {total_d/1000:.2f} km, "
+            f"average = {avg_d/1000:.2f} km, "
+            f"avg pace = {int(avg_pace//1):.0f}:{int(((avg_pace%1)*60)/1):.0f} /km\n"
+            )
+        return txt_result
+
+    except Exception as e:
+        return f"Error retrieving club leaderboard: {e}"
+    
