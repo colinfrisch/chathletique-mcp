@@ -369,6 +369,7 @@ def get_strava_close_segments(
         for segment in segments:
             if segment.id not in starred_segment_ids:
                 result = {
+                "id": segment.id,
                 "name": segment.name,
                 "distance (m)": segment.distance
                             }
@@ -380,3 +381,18 @@ def get_strava_close_segments(
     except Exception as e:
         return f"Error retrieving segments: {e}"
     
+@mcp.tool(
+    title = "Add Strava segment to starred segments",
+    description = "Add a Strava segment to the user's starred segments based on its name by giving its id",
+)
+def add_strava_segment_to_starred(segment_id: str, segment_name: str) -> str:
+    """Add a Strava segment to the user's starred segments based on its name"""
+
+    text_result: str = ""
+    try:
+        client_strava.star_segment(segment_id)
+        text_result = f"Segment '{segment_name}' has been starred."
+        return text_result
+
+    except Exception as e:
+        return f"Error starring segment: {e}"
