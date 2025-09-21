@@ -396,3 +396,33 @@ def add_strava_segment_to_starred(segment_id: str, segment_name: str) -> str:
 
     except Exception as e:
         return f"Error starring segment: {e}"
+
+@mcp.tool(
+    title = "Get Strava clubs of the user",
+    description = "Get the Strava clubs of the user",
+)
+def get_strava_clubs() -> str:
+    """Get the Strava clubs of the user"""
+
+    text_result: str = ""
+
+    try:
+        clubs = client_strava.get_athlete_clubs()
+
+        if not clubs:
+            return "No clubs found for the user."
+
+        for club in clubs:
+            result = {
+                "id": club.id,
+                "name": club.name,
+                "sport_type": club.sport_type
+            }
+            text_result += json.dumps(result) + "\n"
+
+        return text_result
+
+    except Exception as e:
+        return f"Error retrieving clubs: {e}"
+    
+
