@@ -1,11 +1,6 @@
-# Environment and secrets
+# Environment
 .env
 .env.*
-*.pem
-*.key
-*.p12
-credentials.json
-service-account*.json
 
 # Python
 venv/
