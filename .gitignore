@@ -1,6 +1,30 @@
+# Environment and secrets
 .env
-venv/
-experimentations/
+.env.*
+*.pem
+*.key
+*.p12
+credentials.json
+service-account*.json
 
-supp.ipynb
+# Python
+venv/
 __pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project-specific
+experimentations/
+supp.ipynb
